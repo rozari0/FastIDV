@@ -11,3 +11,9 @@ wheels/
 
 # Database files
 test.db
+
+# Upload files
+uploads/
+
+# Env Files
+.env
