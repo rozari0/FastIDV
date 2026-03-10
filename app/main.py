@@ -1,16 +1,28 @@
+from contextlib import asynccontextmanager
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import users
+from app.api.routes import biscuits, users
+from app.core.config import settings
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Starting up the IDV API...")
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    yield
+    print("Shutting down the IDV API...")
+
 
 app = FastAPI(
     title="Identity Verification (IDV) API",
     description="High-performance API for OCR, Biometrics, and User Management.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
-# Set up CORS (Cross-Origin Resource Sharing)
-# Update this with your actual frontend domains in production
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,9 +31,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register your routers with appropriate prefixes and tags
-# app.include_router(idv.router, prefix="/api/v1/idv", tags=["Identity Verification"])
+
+
 app.include_router(users.router, prefix="/api/v1", tags=["User Management"])
+app.include_router(biscuits.router, prefix="/api/v1", tags=["Biscuits"])
 
 
 @app.get("/health", tags=["System"])

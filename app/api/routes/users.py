@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
@@ -7,18 +9,10 @@ from app.models.user import User
 from app.schemas.user import UserCreate
 from app.utils.jwt import create_access_token
 from app.utils.security import hash_password, verify_password
-from typing import Annotated
 
 router = APIRouter(
     prefix="/users",
-    tags=["users"],
 )
-
-
-@router.get("/")
-async def read_users(db=Depends(get_db)):
-    # Implement logic to read users from the database
-    return {"message": "List of users"}
 
 
 @router.post("/signup")
@@ -38,7 +32,9 @@ async def signup_user(user: UserCreate, db=Depends(get_db)):
 
 
 @router.post("/login")
-async def login_user(user: Annotated[OAuth2PasswordRequestForm, Depends()], db=Depends(get_db)):
+async def login_user(
+    user: Annotated[OAuth2PasswordRequestForm, Depends()], db=Depends(get_db)
+):
     user.email = user.username
     result = await db.execute(select(User).where(User.email == user.email))
     existing_user = result.scalar_one_or_none()
