@@ -6,7 +6,7 @@ migrate:
     uv run alembic upgrade head
 
 makemigrations +MESSAGE:
-    uv run alembic revision --autogenerate -m {{MESSAGE}}
+    uv run alembic revision --autogenerate -m "{{MESSAGE}}"
     
 format:
     uv run ruff check --select I --fix

@@ -6,7 +6,9 @@ dependencies = [
     "aiosqlite>=0.22.1",
     "alembic>=1.18.4",
     "fastapi[standard]>=0.135.1",
+    "pwdlib[argon2]>=0.3.0",
     "pydantic-settings>=2.13.1",
+    "python-jose>=3.5.0",
     "sqlalchemy[asyncio]>=2.0.48",
     "tortoise>=0.1.1",
 ]
