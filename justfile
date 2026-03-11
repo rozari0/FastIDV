@@ -5,8 +5,8 @@ default:
 migrate:
     uv run alembic upgrade head
 
-makemigrations +MESSAGE:
-    uv run alembic revision --autogenerate -m "{{MESSAGE}}"
+makemigrations REV +MESSAGE:
+    uv run alembic revision --autogenerate --rev-id {{REV}} -m "{{MESSAGE}}"
     
 format:
     uv run ruff check --select I --fix
