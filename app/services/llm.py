@@ -1,9 +1,11 @@
 import base64
+from json import loads
 
 import aiofiles
 import httpx
 
 from app.core.config import settings
+from app.schemas.user import NidData
 
 
 class LLMService:
@@ -31,16 +33,16 @@ class LLMService:
 
     async def process_data(self, prompt: str):
         payload = {
-            "model": "qwen3.5:latest",
+            "model": "qwen2.5:latest",
             "prompt": prompt,
             "stream": False,
         }
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.post(self.url, json=payload)
 
-        return response.json()["response"]
+        return loads(response.json()["response"])
 
-    async def process_nid(self, text: str, schema: str):
+    async def process_nid(self, text: str, schema: str) -> NidData:
         prompt = f"""
 You are an information extraction system.
 

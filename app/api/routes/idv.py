@@ -1,15 +1,16 @@
-from json import loads
 from pathlib import Path
+from pprint import pprint as print
 from typing import Annotated
 
 import aiofiles
-from fastapi import APIRouter, Depends, UploadFile
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import settings
 from app.core.dependencies import get_current_user, get_db
-from app.models.user import User
-from app.schemas.user import NidData
+from app.models.user import NIDData, User
+from app.schemas.user import EditNidData, NidData
 from app.services.llm import LLMService
 
 upload_path = Path(settings.UPLOAD_DIR)
@@ -40,6 +41,56 @@ async def upload_nid(
         schema=NidData.model_json_schema(),
     )
 
+    user.nid_data = None
+    await db.flush()
+
+    nid = NIDData(
+        dob=NIDData.string_to_date(ocr_result.get("dob")),
+        name=ocr_result.get("name"),
+        name_bn=ocr_result.get("name_bn"),
+        fathers_name=ocr_result.get("fathers_name"),
+        mothers_name=ocr_result.get("mothers_name"),
+        nid=int(ocr_result.get("nid")),
+    )
+
+    user.nid_data = nid
     db.add(user)
     await db.commit()
-    return loads(ocr_result)
+    return nid
+
+
+@router.put("/nid")
+async def edit_nid(
+    user: Annotated[User, Depends(get_current_user)],
+    data: EditNidData,
+    db: Annotated[Session, Depends(get_db)],
+) -> NidData:
+    stmt = select(User).options(selectinload(User.nid_data)).where(User.id == user.id)
+    result = await db.execute(stmt)
+    user = result.scalar_one()
+
+    if not user.nid_data:
+        raise HTTPException(status_code=404, detail="No NID data found for the user")
+
+    updates = data.model_dump(exclude_unset=True)
+
+    for key, value in updates.items():
+        setattr(user.nid_data, key, value)
+
+    db.add(user)
+    await db.commit()
+    return user.nid_data
+
+
+@router.get("/nid")
+async def get_nid(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> NidData:
+    stmt = select(User).options(selectinload(User.nid_data)).where(User.id == user.id)
+    result = await db.execute(stmt)
+    user = result.scalar_one()
+
+    if not user.nid_data:
+        raise HTTPException(status_code=404, detail="No NID data found for the user")
+    return user.nid_data
