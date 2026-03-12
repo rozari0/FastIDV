@@ -1,5 +1,4 @@
 from pathlib import Path
-from pprint import pprint as print
 from typing import Annotated
 
 import aiofiles
@@ -10,6 +9,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.config import settings
 from app.core.dependencies import get_current_user, get_db
 from app.models.user import NIDData, User
+from app.schemas.IDV import VerificationResult
 from app.schemas.user import EditNidData, NidData
 from app.services.deepface import DeepfaceService
 from app.services.llm import LLMService
@@ -103,10 +103,10 @@ async def verify_face(
     db: Annotated[Session, Depends(get_db)],
     deepface: Annotated[DeepfaceService, Depends()],
     file: UploadFile,
-) -> bool:
+) -> VerificationResult:
     stmt = select(User).options(selectinload(User.nid_data)).where(User.id == user.id)
-    result = await db.execute(stmt)
-    user = result.scalar_one()
+    face_verification = await db.execute(stmt)
+    user = face_verification.scalar_one()
 
     if not user.nid_path:
         raise HTTPException(status_code=404, detail="No NID found for this account.")
@@ -117,6 +117,13 @@ async def verify_face(
     async with aiofiles.open(file_path, "wb") as out_file:
         while content := await file.read(1024):
             await out_file.write(content)
-    result = await deepface.verify_face(user.nid_path, str(file_path))
+    face_verification = await deepface.verify_face(user.nid_path, str(file_path))
+    verified = face_verification.get("verified", False)
+    is_spoofed = await deepface.check_spoof(str(file_path))
 
-    return result.get("verified", False)
+    if verified and not is_spoofed:
+        user.is_verified = True
+        db.add(user)
+        await db.commit()
+
+    return VerificationResult(verified=verified, is_spoofed=is_spoofed)

@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     UPLOAD_DIR: str = "uploads"
     OLLAMA_API_URL: str = "http://localhost:11434"
+    ECHO_SQLALCHEMY: bool = True
 
     model_config = SettingsConfigDict(env_file=".env")
 
