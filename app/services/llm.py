@@ -25,7 +25,7 @@ class LLMService:
             "stream": False,
         }
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=10) as client:
             response = await client.post(self.url, json=payload)
         response.raise_for_status()
 
